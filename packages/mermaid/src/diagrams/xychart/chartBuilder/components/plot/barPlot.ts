@@ -8,7 +8,9 @@ export class BarPlot {
     private xAxis: Axis,
     private yAxis: Axis,
     private orientation: XYChartConfig['chartOrientation'],
-    private plotIndex: number
+    private plotIndex: number,
+    private barSeriesIndex: number,
+    private barSeriesCount: number
   ) {}
 
   getDrawableElement(): DrawableElem[] {
@@ -19,10 +21,13 @@ export class BarPlot {
 
     const barPaddingPercent = 0.05;
 
-    const barWidth =
+    const totalGroupWidth =
       Math.min(this.xAxis.getAxisOuterPadding() * 2, this.xAxis.getTickDistance()) *
       (1 - barPaddingPercent);
-    const barWidthHalf = barWidth / 2;
+
+    const barSeriesCount = Math.max(this.barSeriesCount, 1);
+    const barWidth = totalGroupWidth / barSeriesCount;
+    const groupStartOffset = totalGroupWidth / 2;
 
     if (this.orientation === 'horizontal') {
       return [
@@ -31,7 +36,7 @@ export class BarPlot {
           type: 'rect',
           data: finalData.map((data) => ({
             x: this.boundingRect.x,
-            y: data[0] - barWidthHalf,
+            y: data[0] - groupStartOffset + this.barSeriesIndex * barWidth,
             height: barWidth,
             width: data[1] - this.boundingRect.x,
             fill: this.barData.fill,
@@ -41,12 +46,13 @@ export class BarPlot {
         },
       ];
     }
+
     return [
       {
         groupTexts: ['plot', `bar-plot-${this.plotIndex}`],
         type: 'rect',
         data: finalData.map((data) => ({
-          x: data[0] - barWidthHalf,
+          x: data[0] - groupStartOffset + this.barSeriesIndex * barWidth,
           y: data[1],
           width: barWidth,
           height: this.boundingRect.y + this.boundingRect.height - data[1],

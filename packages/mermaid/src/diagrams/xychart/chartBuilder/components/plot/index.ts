@@ -50,42 +50,87 @@ export class BasePlot implements Plot {
       height: this.boundingRect.height,
     };
   }
+
   getDrawableElements(): DrawableElem[] {
     if (!(this.xAxis && this.yAxis)) {
       throw Error('Axes must be passed to render Plots');
     }
+
     const drawableElem: DrawableElem[] = [];
+
+    const barSeriesCount = this.chartData.plots.filter((plot) => plot.type === 'bar').length;
+    let barSeriesIndex = 0;
+
     for (const [i, plot] of this.chartData.plots.entries()) {
       switch (plot.type) {
-        case 'line':
-          {
-            const linePlot = new LinePlot(
-              plot,
-              this.xAxis,
-              this.yAxis,
-              this.chartConfig.chartOrientation,
-              i
-            );
-            drawableElem.push(...linePlot.getDrawableElement());
-          }
+        case 'line': {
+          const linePlot = new LinePlot(
+            plot,
+            this.xAxis,
+            this.yAxis,
+            this.chartConfig.chartOrientation,
+            i
+          );
+          drawableElem.push(...linePlot.getDrawableElement());
           break;
-        case 'bar':
-          {
-            const barPlot = new BarPlot(
-              plot,
-              this.boundingRect,
-              this.xAxis,
-              this.yAxis,
-              this.chartConfig.chartOrientation,
-              i
-            );
-            drawableElem.push(...barPlot.getDrawableElement());
-          }
+        }
+
+        case 'bar': {
+          const barPlot = new BarPlot(
+            plot,
+            this.boundingRect,
+            this.xAxis,
+            this.yAxis,
+            this.chartConfig.chartOrientation,
+            i,
+            barSeriesIndex,
+            barSeriesCount
+          );
+          drawableElem.push(...barPlot.getDrawableElement());
+          barSeriesIndex++;
           break;
+        }
       }
     }
+
     return drawableElem;
   }
+  //   getDrawableElements(): DrawableElem[] {
+  //     if (!(this.xAxis && this.yAxis)) {
+  //       throw Error('Axes must be passed to render Plots');
+  //     }
+  //     const drawableElem: DrawableElem[] = [];
+  //     for (const [i, plot] of this.chartData.plots.entries()) {
+  //       switch (plot.type) {
+  //         case 'line':
+  //           {
+  //             const linePlot = new LinePlot(
+  //               plot,
+  //               this.xAxis,
+  //               this.yAxis,
+  //               this.chartConfig.chartOrientation,
+  //               i
+  //             );
+  //             drawableElem.push(...linePlot.getDrawableElement());
+  //           }
+  //           break;
+  //         case 'bar':
+  //           {
+  //             const barPlot = new BarPlot(
+  //               plot,
+  //               this.boundingRect,
+  //               this.xAxis,
+  //               this.yAxis,
+  //               this.chartConfig.chartOrientation,
+  //               i
+  //             );
+  //             drawableElem.push(...barPlot.getDrawableElement());
+  //           }
+  //           break;
+  //       }
+  //     }
+  //     return drawableElem;
+  //   }
 }
 
 export function getPlotComponent(
