@@ -1,4 +1,10 @@
-import type { BarPlotData, BoundingRect, DrawableElem, XYChartConfig } from '../../interfaces.js';
+import type {
+  BarPlotData,
+  BoundingRect,
+  DrawableElem,
+  PlotData,
+  XYChartConfig,
+} from '../../interfaces.js';
 import type { Axis } from '../axis/index.js';
 
 export class BarPlot {
@@ -10,15 +16,11 @@ export class BarPlot {
     private orientation: XYChartConfig['chartOrientation'],
     private plotIndex: number,
     private barSeriesIndex: number,
-    private barSeriesCount: number
+    private barSeriesCount: number,
+    private allPlots: PlotData[]
   ) {}
 
   getDrawableElement(): DrawableElem[] {
-    const finalData: [number, number][] = this.barData.data.map((d) => [
-      this.xAxis.getScaleValue(d[0]),
-      this.yAxis.getScaleValue(d[1]),
-    ]);
-
     const barPaddingPercent = 0.05;
 
     const totalGroupWidth =
@@ -29,37 +31,71 @@ export class BarPlot {
     const barWidth = totalGroupWidth / barSeriesCount;
     const groupStartOffset = totalGroupWidth / 2;
 
-    if (this.orientation === 'horizontal') {
-      return [
-        {
-          groupTexts: ['plot', `bar-plot-${this.plotIndex}`],
-          type: 'rect',
-          data: finalData.map((data) => ({
-            x: this.boundingRect.x,
-            y: data[0] - groupStartOffset + this.barSeriesIndex * barWidth,
-            height: barWidth,
-            width: data[1] - this.boundingRect.x,
-            fill: this.barData.fill,
-            strokeWidth: 0,
-            strokeFill: this.barData.fill,
-          })),
-        },
-      ];
-    }
+    const isStacked = !!this.barData.stacked;
+
+    const axisBaseline =
+      this.orientation === 'vertical'
+        ? this.boundingRect.y + this.boundingRect.height
+        : this.boundingRect.x;
+
+    const rectData = this.barData.data.map((d, categoryIndex) => {
+      const categoryValue = d[0];
+      const currentValue = d[1];
+
+      const scaledCategory = this.xAxis.getScaleValue(categoryValue);
+
+      let stackedBaseValue = 0;
+
+      if (isStacked) {
+        for (let i = 0; i < this.plotIndex; i++) {
+          const prevPlot = this.allPlots[i];
+          if (prevPlot.type === 'bar' && prevPlot.stacked) {
+            stackedBaseValue += prevPlot.data[categoryIndex][1];
+          }
+        }
+      }
+
+      const scaledTop = this.yAxis.getScaleValue(stackedBaseValue + currentValue);
+      const scaledBase = this.yAxis.getScaleValue(stackedBaseValue);
+
+      if (this.orientation === 'horizontal') {
+        const xStart = Math.min(isStacked ? scaledBase : axisBaseline, scaledTop);
+        const width = Math.abs((isStacked ? scaledBase : axisBaseline) - scaledTop);
+
+        return {
+          x: xStart,
+          y: isStacked
+            ? scaledCategory - totalGroupWidth / 2
+            : scaledCategory - groupStartOffset + this.barSeriesIndex * barWidth,
+          height: isStacked ? totalGroupWidth : barWidth,
+          width,
+          fill: this.barData.fill,
+          strokeWidth: 0,
+          strokeFill: this.barData.fill,
+        };
+      }
+
+      const rectBottom = isStacked ? scaledBase : axisBaseline;
+      const rectTop = scaledTop;
+
+      return {
+        x: isStacked
+          ? scaledCategory - totalGroupWidth / 2
+          : scaledCategory - groupStartOffset + this.barSeriesIndex * barWidth,
+        y: Math.min(rectTop, rectBottom),
+        width: isStacked ? totalGroupWidth : barWidth,
+        height: Math.abs(rectBottom - rectTop),
+        fill: this.barData.fill,
+        strokeWidth: 0,
+        strokeFill: this.barData.fill,
+      };
+    });
 
     return [
       {
         groupTexts: ['plot', `bar-plot-${this.plotIndex}`],
         type: 'rect',
-        data: finalData.map((data) => ({
-          x: data[0] - groupStartOffset + this.barSeriesIndex * barWidth,
-          y: data[1],
-          width: barWidth,
-          height: this.boundingRect.y + this.boundingRect.height - data[1],
-          fill: this.barData.fill,
-          strokeWidth: 0,
-          strokeFill: this.barData.fill,
-        })),
+        data: rectData,
       },
     ];
   }

@@ -169,12 +169,13 @@ function setLineData(title: NormalTextType, data: number[]) {
   plotIndex++;
 }
 
-function setBarData(title: NormalTextType, data: number[]) {
+function setBarData(title: NormalTextType, data: number[], stacked = false) {
   const plotData = transformDataWithoutCategory(data);
   xyChartData.plots.push({
     type: 'bar',
     fill: getPlotColorFromPalette(plotIndex),
     data: plotData,
+    stacked,
   });
   plotIndex++;
 }
